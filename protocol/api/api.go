@@ -1,6 +1,8 @@
 package api
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -100,6 +102,41 @@ func JWTMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func BasicAuth(next http.Handler) http.Handler {
+	user := configure.Config.GetString("basic_username")
+	pwd := configure.Config.GetString("basic_password")
+	if len(user) == 0 || len(pwd) == 0 {
+		log.Info("Api Server Not Use Basic Auth")
+		return next
+	}
+
+	log.Info("Api Server Use Basic Auth")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if ok {
+			usernameHash := sha256.Sum256([]byte(username))
+			passwordHash := sha256.Sum256([]byte(password))
+			expectedUsernameHash := sha256.Sum256([]byte(user))
+			expectedPasswordHash := sha256.Sum256([]byte(pwd))
+
+			usernameMatch := subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1
+			passwordMatch := subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1
+
+			if usernameMatch && passwordMatch {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
+}
+
+func UseAuthMiddleware(next http.Handler) http.Handler {
+	return JWTMiddleware(BasicAuth(next))
+}
+
 func (s *Server) Serve(l net.Listener) error {
 	mux := http.NewServeMux()
 
@@ -123,7 +160,11 @@ func (s *Server) Serve(l net.Listener) error {
 	mux.HandleFunc("/stat/livestat", func(w http.ResponseWriter, r *http.Request) {
 		s.GetLiveStatics(w, r)
 	})
-	http.Serve(l, JWTMiddleware(mux))
+
+	//使用鉴权中间件
+	http.Serve(l, UseAuthMiddleware(mux))
+	// http.Serve(l, JWTMiddleware(mux))
+
 	return nil
 }
 
@@ -434,7 +475,17 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 		msg = err.Error()
 		res.Status = 400
 	}
-	res.Data = msg
+	res.Data = struct {
+		Key string `json:"key"`
+		//Rtmp string `json:"rtmp"`
+		//Flv  string `json:"flv"`
+		//Hls  string `json:"hls"`
+	}{
+		Key: msg,
+		//Rtmp: "rtmp://localhost:1935/live",
+		//Flv:  "http://localhost:7001/live/aa.flv",
+		//Hls:  "http://localhost:7002/live/aa.m3u8",
+	}
 }
 
 //http://127.0.0.1:8090/control/delete?room=ROOM_NAME

@@ -18,6 +18,21 @@
 
 # # API Options
 # api_addr: ":8090"
+
+# # JWT Auth
+#jwt:
+#  secret:
+#  algorithm: 
+
+# # Basic Auth
+basic_username: admin
+basic_password: admin
+
+# # Redis Options
+redis_addr: "172.18.128.1:6379"
+redis_db: 1
+# redis_pwd: 
+
 server:
 - appname: live
   live: true

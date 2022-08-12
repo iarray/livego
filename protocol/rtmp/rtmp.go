@@ -112,6 +112,7 @@ func (s *Server) handleConn(conn *core.Conn) error {
 	}
 
 	appname, name, _ := connServer.GetInfo()
+	//log.Infof("appname = %s , name = %s, url = %s", appname, name, aurl)
 
 	if ret := configure.CheckAppName(appname); !ret {
 		err := fmt.Errorf("application name=%s is not configured", appname)

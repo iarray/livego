@@ -1,6 +1,6 @@
 FROM golang:latest as builder
 WORKDIR /app
-ENV GOPROXY https://goproxy.io
+ENV GOPROXY https://goproxy.cn
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -18,4 +18,6 @@ EXPOSE ${RTMP_PORT}
 EXPOSE ${HTTP_FLV_PORT}
 EXPOSE ${HLS_PORT}
 EXPOSE ${HTTP_OPERATION_PORT}
-ENTRYPOINT ["./livego"]
+VOLUME ["/app/config"]
+ENTRYPOINT ["./livego", "--config_file"]
+CMD ["/app/config/livego.yaml"]

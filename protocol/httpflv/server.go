@@ -32,12 +32,33 @@ func NewServer(h av.Handler) *Server {
 	}
 }
 
+func setupCORS(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+}
+
+func isOptions(r *http.Request) bool {
+	if r.Method == "OPTIONS" {
+		return true
+	}
+	return false
+}
+
 func (server *Server) Serve(l net.Listener) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// setupCORS(&w)
+		// if isOptions(r) {
+		// 	return
+		// }
 		server.handleConn(w, r)
 	})
 	mux.HandleFunc("/streams", func(w http.ResponseWriter, r *http.Request) {
+		// setupCORS(&w)
+		// if isOptions(r) {
+		// 	return
+		// }
 		server.getStream(w, r)
 	})
 	if err := http.Serve(l, mux); err != nil {
